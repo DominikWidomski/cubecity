@@ -1,4 +1,6 @@
 const BLOCK_SIZE = 50;
+const STRUCTURES = ['BLOCK', 'ROAD'];
+let SELECTED_STRUCTURE = 'BLOCK';
 
 function newBox() {
   const node = document.createElement('div');
@@ -150,6 +152,13 @@ function getBoxHTML() {
     plane.style.setProperty("--plane-rot-x", planeRotX + rotationX + unit);
   }
 
+  /**
+   * Handle click events on blocks
+   *
+   * Allows adding blocks
+   *
+   * @param {DOMEvent} e
+   */
   document.addEventListener("click", e => {
     if (!e.target.closest(".side")) {
       return;
@@ -164,51 +173,58 @@ function getBoxHTML() {
       return;
     }
 
-    const styles = window.getComputedStyle(parent);
+    if (SELECTED_STRUCTURE === 'BLOCK') {
+     const styles = window.getComputedStyle(parent);
 
-    const pos = {
-      top: parseFloat(parent.style.top),
-      left: parseFloat(parent.style.left),
-      z: parseFloat(styles.getPropertyValue("--z-pos"))
-    };
+     const pos = {
+       top: parseFloat(parent.style.top),
+       left: parseFloat(parent.style.left),
+       z: parseFloat(styles.getPropertyValue("--z-pos"))
+     };
 
-    if (side.classList.contains("r")) {
-      pos.left += BLOCK_SIZE;
-    } else if (side.classList.contains("l")) {
-      pos.left -= BLOCK_SIZE;
-    } else if (side.classList.contains("f")) {
-      pos.top += BLOCK_SIZE;
-    } else if (side.classList.contains("b")) {
-      pos.top -= BLOCK_SIZE;
-    } else if (side.classList.contains("t")) {
-      pos.z += BLOCK_SIZE;
-    } else {
-      pos.z -= BLOCK_SIZE;
+     if (side.classList.contains("r")) {
+       pos.left += BLOCK_SIZE;
+     } else if (side.classList.contains("l")) {
+       pos.left -= BLOCK_SIZE;
+     } else if (side.classList.contains("f")) {
+       pos.top += BLOCK_SIZE;
+     } else if (side.classList.contains("b")) {
+       pos.top -= BLOCK_SIZE;
+     } else if (side.classList.contains("t")) {
+       pos.z += BLOCK_SIZE;
+     } else {
+       pos.z -= BLOCK_SIZE;
+     }
+
+     // target.classList.add("triggered");
+
+     // setTimeout(() => {
+     //   target.classList.remove("triggered");
+     // }, 500);
+
+     var box = newBox();
+
+     box.style.top = pos.top + "px";
+     box.style.left = pos.left + "px";
+     box.style.setProperty("--z-pos", pos.z + "px");
+     box.dataset.level = parseInt(parent.dataset.level) + (side.classList.contains("t") ? 1 : 0) || 0;
+     
+     if (side.classList.contains("t")) {
+       parent.querySelectorAll('.l canvas, .r canvas, .b canvas').forEach(canvas => {
+         canvas.dataset.texture = 'groundDeep';
+       });
+     }
+     
+     paintTextures(box);
+     paintTextures(parent);
+
+     document.querySelector(".plane").appendChild(box);
+     getAnimatable(box); 
+
+    } else if (SELECTED_STRUCTURE === 'ROAD') {
+      const top = parent.querySelector('.t');
+      top.style['background-color'] = '#6f666f';
     }
-
-    // target.classList.add("triggered");
-
-    // setTimeout(() => {
-    //   target.classList.remove("triggered");
-    // }, 500);
-
-    var box = newBox();
-
-    box.style.top = pos.top + "px";
-    box.style.left = pos.left + "px";
-    box.style.setProperty("--z-pos", pos.z + "px");
-    
-    if (side.classList.contains("t")) {
-      parent.querySelectorAll('.l canvas, .r canvas, .b canvas').forEach(canvas => {
-        canvas.dataset.texture = 'groundDeep';
-      });
-    }
-    
-    paintTextures(box);
-    paintTextures(parent);
-
-    document.querySelector(".plane").appendChild(box);
-    getAnimatable(box);
   });
 })();
 
@@ -325,12 +341,48 @@ function generateWorld() {
       box.style.top = x + "px";
       box.style.left = y + "px";
       box.style.setProperty("--z-pos", 20 + "px");
+      box.dataset.level = 0;
       
       paintTextures(box);
 
       document.querySelector(".plane").appendChild(box);
     }
   }
+}
+
+function getAgentElement(x, y) {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `<div class="agent" style="left: ${x}px; top: ${y}px;"></div>`;
+  return wrapper.firstChild;
+}
+
+class Agent {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+
+    this.element = getAgentElement(this.x, this.y);
+
+    this.isOnMap = false;
+  }
+
+  init() {
+    if(!this.isOnMap) {
+      document.querySelector('.plane').appendChild(this.element);
+
+      this.isOnMap = true;
+    }
+  }
+
+  update() {
+    this.element.style.left = this.x;
+    this.element.style.top = this.y;
+  }
+}
+
+function generateAgent(x, y) {
+  const agent = new Agent(x, y);
+  agent.init();
 }
 
 generateWorld();

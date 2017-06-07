@@ -186,3 +186,10 @@ canvas {
     box-shadow: 0 0 10px 10px rgba(180, 80, 70, 0.3);
   }
 }
+
+.agent {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: red;
+}

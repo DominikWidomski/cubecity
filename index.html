@@ -5,17 +5,22 @@
   <title>CSS Cubes</title>
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
-
-  
-      <link rel="stylesheet" href="css/style.css">
-
-  
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .agent {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      background: red;
+      transform: translateZ(70px);
+    }
+  </style>
 </head>
 
 <body>
   <div class="container container-3d">
   <div class="plane">
-    <div class="box" style="top: 25px; left: 25px;">
+    <!-- <div class="box" style="top: 25px; left: 25px;">
       <div class="side"></div>
       <div class="side r">
         <canvas width="100" height="100" data-texture="ground"></canvas>
@@ -52,7 +57,7 @@
         <canvas width="100" height="100" data-texture="grass"></canvas>
       </div>
     </div>
-  </div>
+  </div> -->
 </div>
   <script src='http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
 
