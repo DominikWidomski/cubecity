@@ -159,8 +159,8 @@ function getBoxHTML() {
    *
    * @param {DOMEvent} e
    */
-  document.addEventListener("click", e => {
-    if (!e.target.closest(".side")) {
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.side')) {
       return;
     }
 
@@ -222,6 +222,8 @@ function getBoxHTML() {
      getAnimatable(box); 
 
     } else if (SELECTED_STRUCTURE === 'ROAD') {
+      const block = getBlockByElement(parent);
+      block.type = 'ROAD';
       const top = parent.querySelector('.t');
       top.style['background-color'] = '#6f666f';
     }
@@ -332,10 +334,11 @@ getAnimatable();
 requestAnimationFrame(draw);
 
 const scene = [];
+const sceneRefs = new WeakMap();
 
 function generateWorld() {
-  for (let x = 0; x < 300; x += BLOCK_SIZE) {
-    for (let y = 0; y < 300; y += BLOCK_SIZE) {
+  for (let x = 0; x < 500; x += BLOCK_SIZE) {
+    for (let y = 0; y < 500; y += BLOCK_SIZE) {
       const box = newBox();
       
       box.style.top = x + "px";
@@ -343,7 +346,12 @@ function generateWorld() {
       box.style.setProperty("--z-pos", 20 + "px");
       box.dataset.level = 0;
       
-      paintTextures(box);
+      // paintTextures(box);
+
+      addBlock({
+        el: box,
+        type: 'GROUND',
+      }, x / BLOCK_SIZE, y / BLOCK_SIZE, 0);
 
       document.querySelector(".plane").appendChild(box);
     }
@@ -385,15 +393,46 @@ function generateAgent(x, y) {
   agent.init();
 }
 
+/**
+ * Retrieve structure describing the roads on map
+ *
+ * @return {array}
+ */
+function getRoadsMap() {
+  return scene.map(xArr => {
+
+  });
+
+  return scene.filter(xArr => {
+    return xArr.filter(yArr => {
+      return yArr.filter(block => {
+        console.log(block);
+        return block.type === 'ROAD';
+      });
+    });
+    // console.log(xArr);
+    // return xArr[0][0].y;
+  });
+}
+
+function getBlockByElement(el) {
+  return sceneRefs.get(el);
+}
+
 generateWorld();
 
 // block - position, textures for each side
 function addBlock(block, x, y, z) {
-  scene[y] = scene[y] || [];
-  scene[y][x] = scene[y][x] || [];
-  scene[y][x][z] = Object.assign({}, block, {
+  block = Object.assign({}, block, {
     x, y, z
   });
+
+  // Reference to block from DOMElement
+  sceneRefs.set(block.el, block);
+
+  scene[y] = scene[y] || [];
+  scene[y][x] = scene[y][x] || [];
+  scene[y][x][z] = block;
 }
 
 function getBlock(x, y, z) {
