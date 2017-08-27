@@ -155,7 +155,7 @@ canvas {
     
     &.l {
       transform-origin: 0% 100%;
-      transform: rotateY(90deg) rotateZ(-90deg);
+      transform: rotateY(-90deg);
       background-color: #777;
     }
     
@@ -167,8 +167,8 @@ canvas {
     
     &.b {
       transform-origin: 0% 100%;
-      transform: rotateY(180deg) translateY(-100%) rotateX(-90deg);
-      background-color: red;
+      transform: rotateY(-90deg) translateY(-100%) rotateX(90deg);
+      background-color: #888;
     }
     
     &.t {
