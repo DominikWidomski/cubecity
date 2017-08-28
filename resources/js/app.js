@@ -1,6 +1,30 @@
+import Agent from './components/agent';
+
 const BLOCK_SIZE = 50;
 const STRUCTURES = ['BLOCK', 'ROAD'];
 let SELECTED_STRUCTURE = 'BLOCK';
+const WORLD_X = 500;
+const WORLD_Y = 500;
+const GAME = window.GAME = {
+  running: true,
+  agents: new Set(),
+};
+
+// @TODO: Was trying to create some sort of observable Set easily using Proxy
+// to observe the amount of agents visible etc.
+// Issues with context or something when trying to proxy a Set.
+// Maybe need custom observable???
+// 
+// const GAMEAgentsProxyHandler = {
+//   // set(target, key, val) {
+//   // },
+
+//   apply(target, thisArg, argumentsList) {
+//     console.log(target, thisArg, argumentsList);
+//   }
+// }
+
+// GAME.agents = new Proxy(GAME.agents, GAMEAgentsProxyHandler);
 
 function newBox() {
   const node = document.createElement('div');
@@ -100,19 +124,19 @@ function getBoxHTML() {
     );
 
     // assign the animation to our element (which will cause the animation to run)
-    document.querySelector(".plane").style.webkitAnimationName = anim;
+    document.querySelector('.plane').style.webkitAnimationName = anim;
   }
 
   var b = document.body;
   var lastY = null;
   var lastX = null;
   var dragging = false;
-  b.addEventListener("mousedown", function(e) {
+  b.addEventListener('mousedown', function(e) {
     dragging = true;
     lastY = e.y;
     lastX = e.x;
   });
-  b.addEventListener("mousemove", function(e) {
+  b.addEventListener('mousemove', function(e) {
     if (!dragging) {
       return;
     }
@@ -133,8 +157,19 @@ function getBoxHTML() {
     // change('spin', diffY);
     rotatePlane(diffX, diffY);
   });
-  b.addEventListener("mouseup", function(e) {
+  b.addEventListener('mouseup', function(e) {
     dragging = false;
+  });
+
+  b.addEventListener('keypress', e => {
+    if (e.key === 'b') {
+      let currIndex = STRUCTURES.indexOf(SELECTED_STRUCTURE);
+      SELECTED_STRUCTURE = STRUCTURES[(++currIndex) % STRUCTURES.length];
+    }
+
+    if (e.key === 'a') {
+      generateAgent(Math.random() * WORLD_X | 0, Math.random() * WORLD_Y | 0);
+    }
   });
 
   function rotatePlane(rotationZ = 0, rotationX = 0) {
@@ -142,14 +177,14 @@ function getBoxHTML() {
       return;
     }
 
-    const plane = document.querySelector(".plane");
+    const plane = document.querySelector('.plane');
     const styles = window.getComputedStyle(plane);
-    const planeRotZ = parseFloat(styles.getPropertyValue("--plane-rot-z"));
-    const planeRotX = parseFloat(styles.getPropertyValue("--plane-rot-x"));
-    const unit = "deg";
+    const planeRotZ = parseFloat(styles.getPropertyValue('--plane-rot-z'));
+    const planeRotX = parseFloat(styles.getPropertyValue('--plane-rot-x'));
+    const unit = 'deg';
 
-    plane.style.setProperty("--plane-rot-z", planeRotZ + rotationZ + unit);
-    plane.style.setProperty("--plane-rot-x", planeRotX + rotationX + unit);
+    plane.style.setProperty('--plane-rot-z', planeRotZ + rotationZ + unit);
+    plane.style.setProperty('--plane-rot-x', planeRotX + rotationX + unit);
   }
 
   /**
@@ -203,10 +238,13 @@ function getBoxHTML() {
      // }, 500);
 
      var box = newBox();
+     const x = pos.top;
+     const y = pos.left;
+     const z = pos.z;
 
-     box.style.top = pos.top + "px";
-     box.style.left = pos.left + "px";
-     box.style.setProperty("--z-pos", pos.z + "px");
+     box.style.top = x + "px";
+     box.style.left = y + "px";
+     box.style.setProperty("--z-pos", z + "px");
      box.dataset.level = parseInt(parent.dataset.level) + (side.classList.contains("t") ? 1 : 0) || 0;
      
      if (side.classList.contains("t")) {
@@ -214,6 +252,11 @@ function getBoxHTML() {
          canvas.dataset.texture = 'groundDeep';
        });
      }
+
+     addBlock({
+      el: box,
+      type: 'GROUND',
+     }, x, y, z);
      
      paintTextures(box);
      paintTextures(parent);
@@ -337,8 +380,8 @@ const scene = [];
 const sceneRefs = new WeakMap();
 
 function generateWorld() {
-  for (let x = 0; x < 500; x += BLOCK_SIZE) {
-    for (let y = 0; y < 500; y += BLOCK_SIZE) {
+  for (let x = 0; x < WORLD_X; x += BLOCK_SIZE) {
+    for (let y = 0; y < WORLD_Y; y += BLOCK_SIZE) {
       const box = newBox();
       
       box.style.top = x + "px";
@@ -358,38 +401,13 @@ function generateWorld() {
   }
 }
 
-function getAgentElement(x, y) {
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = `<div class="agent" style="left: ${x}px; top: ${y}px;"></div>`;
-  return wrapper.firstChild;
-}
-
-class Agent {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-
-    this.element = getAgentElement(this.x, this.y);
-
-    this.isOnMap = false;
-  }
-
-  init() {
-    if(!this.isOnMap) {
-      document.querySelector('.plane').appendChild(this.element);
-
-      this.isOnMap = true;
-    }
-  }
-
-  update() {
-    this.element.style.left = this.x;
-    this.element.style.top = this.y;
-  }
-}
-
-function generateAgent(x, y) {
-  const agent = new Agent(x, y);
+function generateAgent(x, y, goal) {
+  const agent = new Agent(x, y, document.querySelector('.plane'));
+  agent.goal = {
+    x: Math.random() * WORLD_X | 0,
+    y: Math.random() * WORLD_Y | 0,
+  };
+  GAME.agents.add(agent);
   agent.init();
 }
 
@@ -454,3 +472,29 @@ function getNeighbours(x, y, z) {
     getBlock(x, y, z-1),
   ].filter(b => b !== undefined);
 }
+
+// GAME
+
+function updateGameWorld() {
+  for (const agent of GAME.agents) {
+    agent.update();
+
+    if (agent.isFinished) {
+      agent.isFinished = false;
+      
+      // agent.destroy();
+      // GAME.agents.delete(agent);
+
+      agent.goal = {
+        x: Math.random() * WORLD_X | 0,
+        y: Math.random() * WORLD_Y | 0,
+      }
+    }
+  }
+
+  if (GAME.running) {
+    requestAnimationFrame(updateGameWorld);
+  }
+}
+
+requestAnimationFrame(updateGameWorld);
