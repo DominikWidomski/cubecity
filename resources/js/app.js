@@ -199,12 +199,21 @@ function getBoxHTML() {
       return;
     }
 
+    const groundTopColor = '#6f666f';
+    const blockTopColor = '#AAAAAA';
+
     const target = e.target;
     const side = target.closest(".side");
     const parent = target.closest(".box");
 
     if (e.shiftKey) {
-      parent.parentNode.removeChild(parent);
+      if (SELECTED_STRUCTURE === 'BLOCK') {
+        parent.remove();
+      } else if (SELECTED_STRUCTURE === 'ROAD') {
+        getBlockByElement(parent).type = 'GROUND';
+        parent.querySelector('.t').style['background-color'] = blockTopColor;
+      }
+
       return;
     }
 
@@ -265,10 +274,8 @@ function getBoxHTML() {
      getAnimatable(box); 
 
     } else if (SELECTED_STRUCTURE === 'ROAD') {
-      const block = getBlockByElement(parent);
-      block.type = 'ROAD';
-      const top = parent.querySelector('.t');
-      top.style['background-color'] = '#6f666f';
+      getBlockByElement(parent).type = 'ROAD';
+      parent.querySelector('.t').style['background-color'] = groundTopColor;
     }
   });
 })();
