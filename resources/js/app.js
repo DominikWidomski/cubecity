@@ -1,10 +1,11 @@
 import Agent from './components/agent';
 
 const BLOCK_SIZE = 50;
-const STRUCTURES = ['BLOCK', 'ROAD'];
-let SELECTED_STRUCTURE = 'BLOCK';
 const WORLD_X = 500;
 const WORLD_Y = 500;
+const STRUCTURES = ['BLOCK', 'ROAD'];
+let SELECTED_STRUCTURE = 'ROAD';
+
 const GAME = window.GAME = {
   running: true,
   agents: new Set(),
@@ -26,21 +27,26 @@ const GAME = window.GAME = {
 
 // GAME.agents = new Proxy(GAME.agents, GAMEAgentsProxyHandler);
 
-function newBox() {
+const blockConfig = {
+  roadTopColor: '#6f666f',
+  blockTopColor: '#AAAAAA',
+};
+
+function newBox(type = 'BLOCK') {
   const node = document.createElement('div');
-  node.innerHTML = getBoxHTML();
+  node.innerHTML = getBoxHTML(type);
 
   return node.firstChild;
 }
 
-function getBoxHTML() {
+function getBoxHTML(type) {
   return `<div class="box">
     <div class="side"></div>
     <div class="side r"></div>
     <div class="side l"></div>
     <div class="side f"></div>
     <div class="side b"></div>
-    <div class="side t"></div>
+    <div class="side t" ${type === 'ROAD' ? `style="background-color: ${blockConfig.roadTopColor}"` : ''}></div>
   </div>`;
 
   // return `<div class="box">
@@ -168,7 +174,7 @@ function getBoxHTML() {
     }
 
     if (e.key === 'a') {
-      generateAgent(Math.random() * WORLD_X | 0, Math.random() * WORLD_Y | 0);
+      generateAgent();
     }
   });
 
@@ -199,8 +205,7 @@ function getBoxHTML() {
       return;
     }
 
-    const groundTopColor = '#6f666f';
-    const blockTopColor = '#AAAAAA';
+    const { roadTopColor, blockTopColor } = blockConfig;
 
     const target = e.target;
     const side = target.closest(".side");
@@ -274,8 +279,10 @@ function getBoxHTML() {
      getAnimatable(box); 
 
     } else if (SELECTED_STRUCTURE === 'ROAD') {
+      // Place road
       getBlockByElement(parent).type = 'ROAD';
-      parent.querySelector('.t').style['background-color'] = groundTopColor;
+      // @TODO: somehow keep that to block re-rendering
+      parent.querySelector('.t').style['background-color'] = roadTopColor;
     }
   });
 })();
@@ -386,10 +393,18 @@ requestAnimationFrame(draw);
 const scene = [];
 const sceneRefs = new WeakMap();
 
-function generateWorld() {
+function generateWorld(roadMap = []) {
   for (let x = 0; x < WORLD_X; x += BLOCK_SIZE) {
     for (let y = 0; y < WORLD_Y; y += BLOCK_SIZE) {
-      const box = newBox();
+      const [_x, _y] = [x / BLOCK_SIZE, y / BLOCK_SIZE];
+      const width = 10;
+      let type = 'BLOCK';
+
+      if (roadMap[_y * width + _x] === 1) {
+        type = 'ROAD';
+      }
+
+      const box = newBox(type);
       
       box.style.top = x + "px";
       box.style.left = y + "px";
@@ -400,51 +415,182 @@ function generateWorld() {
 
       addBlock({
         el: box,
-        type: 'GROUND',
-      }, x / BLOCK_SIZE, y / BLOCK_SIZE, 0);
+        type,
+      }, _x, _y, 0);
 
       document.querySelector(".plane").appendChild(box);
     }
   }
 }
 
-function generateAgent(x, y, goal) {
-  const agent = new Agent(x, y, document.querySelector('.plane'));
-  agent.goal = {
-    x: Math.random() * WORLD_X | 0,
-    y: Math.random() * WORLD_Y | 0,
-  };
-  GAME.agents.add(agent);
-  agent.init();
+/**
+ * Retrieve struct describing the roads on map
+ * Returns object with keys as coordinates of road blocks.
+ *
+ * @TODO: Cache the roadmap and invalidate when road added / removed
+ *
+ * @return {object}
+ */
+function getRoadMap() {
+  const roadBlocks = scene.map(xArr => {
+    // Return ROAD blocks
+    return xArr.filter(block => {
+      return block.type === 'ROAD';
+    });
+
+  // Filter out empty arrays
+  }).filter(xArr => xArr.length);
+
+  const roadMap = {};
+
+  for (const row of roadBlocks) {
+    for (const block of row) {
+      roadMap[`${block.x},${block.y}`] = block;
+    }
+  }
+
+  return roadMap;
+
+  // This was kinda with 3D in mind... skip that for now.
+  // We'll keep roads 2D
+  // return scene.filter(xArr => {
+  //   return xArr.filter(yArr => {
+  //     // console.log(yArr);
+  //     return yArr.filter(block => {
+  //       return block.type === 'ROAD';
+  //     }).length;
+  //   }).length;
+  // });
+}
+
+const neighbours = [
+  {x: 1, y: 0},
+  {x: 0, y: 1},
+  {x: -1, y: 0},
+  {x: 0, y: -1},
+];
+
+/**
+ * Return any first found neighbouring road block
+ *
+ * @param {object} block
+ * @return {object}
+ */
+function getRoadNeighbour(block) {
+  const roadMap = getRoadMap();
+
+  for (const {x, y} of neighbours) {
+    const neighbour = roadMap[`${block.x + x},${block.y + y}`];
+
+    if (neighbour) {
+      return neighbour;
+    }
+  }
+
+  return undefined;
 }
 
 /**
- * Retrieve structure describing the roads on map
+ * Get all adjacent blocks
+ *
+ * @param {object} block
  *
  * @return {array}
  */
-function getRoadsMap() {
-  return scene.map(xArr => {
+function getRoadNeighbours(block) {
+  const roadMap = getRoadMap();
 
-  });
-
-  return scene.filter(xArr => {
-    return xArr.filter(yArr => {
-      return yArr.filter(block => {
-        console.log(block);
-        return block.type === 'ROAD';
-      });
-    });
-    // console.log(xArr);
-    // return xArr[0][0].y;
-  });
+  return neighbours.map(({x, y}) => {
+    return roadMap[`${block.x + x},${block.y + y}`];
+  }).filter(a => a);
 }
+
+/**
+ * Find road path from A to B
+ *
+ * @param {Node} a Start node
+ * @param {Node} b Target node
+ *
+ * @return {Array|NodePath}
+ */
+function findPath(a, b) {
+  // VOLOTILE
+  return;
+
+  // Check if valid nodes
+  if (!(roadMap[`${a.x},${a.y}`] && roadMap[`${b.x},${b.y}`])) {
+    console.error('Error: invalid nodes');
+    return;
+  }
+
+  // All ROAD nodes
+  const roadMap = getRoadMap();
+
+  // Nodes already checked
+  const checked = [`${a.x},${a.y}`];
+  // Start with the start node
+  const queue = [a];
+  // Path to be selected;
+  let path = [];
+
+  function searchFromNode(node) {
+    const path = [];
+
+    // THIS IS NOT HOW RECURSIVE WORKS!
+    while (queue.length) {
+      // Checking this node
+      const node = queue.shift();
+
+      for (const {x, y} of neighbours) {
+        const neighbour = roadMap[`${node.x + x},${node.y + y}`];
+        if (neighbour) {
+          // If already checked
+          if (checked.includes(`${neighbour.x},${neighbour.y}`)) {
+            continue;
+          }
+
+          // If is target
+          if (neighbour.x !== b.x && neighbour.y !== b.y) {
+            return neighbour;
+          }
+
+          checked.push(`${neighbour.x},${neighbour.y}`);
+          queue.push(neighbour);
+          searchFromNode(neighbour);
+        }
+      }
+
+      checked.push(node);
+    }
+
+    return path;
+  }
+
+  return searchFromNode(a);
+}
+
+window.findPath = findPath;
+window.getRoadMap = getRoadMap;
+window.getRoadNeighbour = getRoadNeighbour;
 
 function getBlockByElement(el) {
   return sceneRefs.get(el);
 }
 
-generateWorld();
+const roadMap = [
+   ,  ,  ,  ,  ,  ,  ,  ,  ,  ,
+   ,  ,  ,  ,  ,  ,  ,  ,  ,  ,
+   ,  , 1, 1, 1, 1, 1, 1, 1,  ,
+   ,  , 1,  , 1,  , 1,  , 1,  ,
+   ,  , 1,  , 1,  , 1,  , 1,  ,
+   ,  , 1,  , 1,  , 1,  , 1,  ,
+   ,  , 1,  , 1,  , 1,  , 1,  ,
+   ,  , 1,  , 1,  , 1,  , 1,  ,
+   ,  , 1, 1, 1, 1, 1, 1, 1,  ,
+   ,  ,  ,  ,  ,  ,  ,  ,  ,  ,
+];
+
+generateWorld(roadMap);
 
 // block - position, textures for each side
 function addBlock(block, x, y, z) {
@@ -455,16 +601,26 @@ function addBlock(block, x, y, z) {
   // Reference to block from DOMElement
   sceneRefs.set(block.el, block);
 
+  // Again, had 3D in mind... not for now
+  // scene[y] = scene[y] || [];
+  // scene[y][x] = scene[y][x] || [];
+  // scene[y][x][z] = block;
+
   scene[y] = scene[y] || [];
-  scene[y][x] = scene[y][x] || [];
-  scene[y][x][z] = block;
+  scene[y][x] = block
 }
 
 function getBlock(x, y, z) {
-  console.log(arguments);
-  if(scene[y] && scene[y][x] && scene[y][x][z]) {
-    return scene[y][x][z];
+  console.log('Retrieving block @', arguments);
+
+  if(scene[y] && scene[y][x]) {
+    return scene[y][x];
   }
+
+  // Again, had 3D in mind, not for now...
+  // if(scene[y] && scene[y][x] && scene[y][x][z]) {
+  //   return scene[y][x][z];
+  // }
   
   return undefined;
 }
@@ -480,7 +636,44 @@ function getNeighbours(x, y, z) {
   ].filter(b => b !== undefined);
 }
 
-// GAME
+const agentPathTargetTracker = new WeakMap();
+const agentPathTrackedLength = 2;
+
+function generateAgent(x, y, goal) {
+  const roadMap = getRoadMap();
+  const keys = Object.keys(roadMap);
+  const key = keys[Math.random() * keys.length | 0];
+  const block = roadMap[key];
+
+  if (!block) {
+    return;
+  }
+
+  const agent = new Agent(block.y * BLOCK_SIZE, block.x * BLOCK_SIZE, document.querySelector('.plane'));
+  
+  // if (block) {
+    agentPathTargetTracker.set(agent, [block]);
+    agent.goal = {
+      x: block.y * BLOCK_SIZE | 0,
+      y: block.x * BLOCK_SIZE | 0,
+    };
+  // } else {
+  //   agent.goal = {
+  //     x: Math.random() * WORLD_X | 0,
+  //     y: Math.random() * WORLD_Y | 0,
+  //   }
+  // }
+
+  GAME.agents.add(agent);
+  agent.init();
+}
+window.agentPathTargetTracker = agentPathTargetTracker;
+
+//////////////////////////////////////////////////////////
+//\\\\\\\\\\\\\\\\\\\\\\\\        \\\\\\\\\\\\\\\\\\\\\\\\
+//////////////////////////  GAME  ////////////////////////
+//\\\\\\\\\\\\\\\\\\\\\\\\        \\\\\\\\\\\\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////
 
 function updateGameWorld() {
   for (const agent of GAME.agents) {
@@ -488,13 +681,49 @@ function updateGameWorld() {
 
     if (agent.isFinished) {
       agent.isFinished = false;
-      
-      // agent.destroy();
-      // GAME.agents.delete(agent);
 
-      agent.goal = {
-        x: Math.random() * WORLD_X | 0,
-        y: Math.random() * WORLD_Y | 0,
+      if (agentPathTargetTracker.has(agent)) {
+        const path = agentPathTargetTracker.get(agent);
+        const currentTarget = path[0];
+        const neighbours = getRoadNeighbours(currentTarget).filter(n => !path.includes(n));
+        let newTarget;
+
+        if (neighbours.length > 0) {
+          newTarget = neighbours[Math.random() * neighbours.length | 0];
+        }
+
+        if (newTarget) {
+          path.unshift(newTarget);
+          path.length = agentPathTrackedLength;
+
+          agent.goal = {
+            x: newTarget.y * BLOCK_SIZE | 0,
+            y: newTarget.x * BLOCK_SIZE | 0,
+          };
+
+          continue;   
+        } else {
+          agent.destroy();
+          GAME.agents.delete(agent);
+        }
+      }
+
+      const roadMap = getRoadMap();
+      const keys = Object.keys(roadMap);
+      const key = keys[Math.random() * keys.length | 0];
+      const block = roadMap[key];
+
+      if (block) {
+        agentPathTargetTracker.set(agent, block);
+        agent.goal = {
+          x: block.y * BLOCK_SIZE | 0,
+          y: block.x * BLOCK_SIZE | 0,
+        };
+      } else {
+        agent.goal = {
+          x: Math.random() * WORLD_X | 0,
+          y: Math.random() * WORLD_Y | 0,
+        }
       }
     }
   }
