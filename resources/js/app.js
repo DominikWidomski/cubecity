@@ -411,6 +411,7 @@ function generateWorld(roadMap = []) {
       box.style.setProperty("--z-pos", 20 + "px");
       box.dataset.level = 0;
       
+      box.querySelector('.t').innerText = `${_x}, ${_y}`;
       // paintTextures(box);
 
       addBlock({
@@ -508,70 +509,95 @@ function getRoadNeighbours(block) {
 /**
  * Find road path from A to B
  *
- * @param {Node} a Start node
- * @param {Node} b Target node
+ * @param {Node} start Start node
+ * @param {Node} end   Target node
  *
  * @return {Array|NodePath}
  */
-function findPath(a, b) {
-  // VOLOTILE
-  return;
+function findPath(start, end) {
+  // console.log('Looking from ${a.x}, ${a.y} to ${b.x}, ${b.y}');
+
+  let checks = 0;
+
+  // All ROAD nodes
+  const roadMap = getRoadMap();
+  const a = roadMap[start];
+  const b = roadMap[end];
+
+  // console.log('Got Road map of ${roadMap.length} nodes');
 
   // Check if valid nodes
-  if (!(roadMap[`${a.x},${a.y}`] && roadMap[`${b.x},${b.y}`])) {
+  if (!(a && b)) {
     console.error('Error: invalid nodes');
     return;
   }
 
-  // All ROAD nodes
-  const roadMap = getRoadMap();
+  // Closed set - Nodes already visited
+  const visited = [];
+  // Open set - Start with the start node
+  // const queue = [a];
 
-  // Nodes already checked
-  const checked = [`${a.x},${a.y}`];
-  // Start with the start node
-  const queue = [a];
-  // Path to be selected;
-  let path = [];
+  /**
+   * Simple cardinal(?) distance between nodes
+   * assuming all grid locations are 1 unit away
+   * not including special conditions
+   */
+  function distance(a, b) {
+    [x1, y1] = a.split(',').map(Number);
+    [x2, y2] = b.split(',').map(Number);
 
-  function searchFromNode(node) {
-    const path = [];
+    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+  }
 
-    // THIS IS NOT HOW RECURSIVE WORKS!
-    while (queue.length) {
-      // Checking this node
-      const node = queue.shift();
-
-      for (const {x, y} of neighbours) {
-        const neighbour = roadMap[`${node.x + x},${node.y + y}`];
-        if (neighbour) {
-          // If already checked
-          if (checked.includes(`${neighbour.x},${neighbour.y}`)) {
-            continue;
-          }
-
-          // If is target
-          if (neighbour.x !== b.x && neighbour.y !== b.y) {
-            return neighbour;
-          }
-
-          checked.push(`${neighbour.x},${neighbour.y}`);
-          queue.push(neighbour);
-          searchFromNode(neighbour);
-        }
-      }
-
-      checked.push(node);
+  function searchFromNode(node, p = '.') {
+    if (checks++ > 100) {
+      console.log('TOO DEEP MAN!');
+      return;
     }
+
+    visited.push(`${node.x},${node.y}`);
+    // console.log('%c===================================', 'background: teal;');
+    console.log(`${p} SEARCHING NODE ${node.x},${node.y}`);
+
+    // If is target
+    if (node.x === b.x && node.y === b.y) {
+      console.log(`${p} NODE IS TARGET!!! RETURN!`);
+      return `${node.x},${node.y}`;
+    }
+
+    let path = [`${node.x},${node.y}`];
+
+    const neighbours = getRoadNeighbours(node).filter(n => !visited.includes(`${n.x},${n.y}`));
+    console.log(`${p} GOT ${neighbours.length} NEIGHBOURS`);
+
+    for (let neighbourNode of neighbours) {
+      // console.log(`[${node.x},${node.y}] GONNA CHECK NODE ${neighbourNode.x},${neighbourNode.y}`);
+      const subPath = searchFromNode(neighbourNode, p+'.');
+      console.log(`${p} SUBPATH RETURNED FROM ${neighbourNode.x},${neighbourNode.y}, ${subPath}`);
+
+      if (subPath.includes(`${b.x},${b.y}`)) {
+        path = path.concat(subPath);
+        // console.log('Path: %o', path);
+      }
+    }
+
+    // console.log(`RETURNING PATH from  ${node.x},${node.y}: %o`, path);
 
     return path;
   }
 
-  return searchFromNode(a);
+  const final = searchFromNode(a);
+  console.log('PATH: ', final);
+  return final;
 }
 
 window.findPath = findPath;
 window.getRoadMap = getRoadMap;
 window.getRoadNeighbour = getRoadNeighbour;
+window.runPath = function(from, to) {
+  jobs.push(findPath(from, to));
+  generateAgent();
+}
 
 function getBlockByElement(el) {
   return sceneRefs.get(el);
@@ -581,12 +607,12 @@ const roadMap = [
    ,  ,  ,  ,  ,  ,  ,  ,  ,  ,
    ,  ,  ,  ,  ,  ,  ,  ,  ,  ,
    ,  , 1, 1, 1, 1, 1, 1, 1,  ,
-   ,  , 1,  , 1,  , 1,  , 1,  ,
-   ,  , 1,  , 1,  , 1,  , 1,  ,
-   ,  , 1,  , 1,  , 1,  , 1,  ,
-   ,  , 1,  , 1,  , 1,  , 1,  ,
-   ,  , 1,  , 1,  , 1,  , 1,  ,
-   ,  , 1, 1, 1, 1, 1, 1, 1,  ,
+   ,  , 1,  ,  , 1,  ,  , 1,  ,
+   ,  , 1, 1, 1, 1, 1,  , 1,  ,
+   ,  ,  ,  , 1,  , 1, 1, 1,  ,
+   ,  ,  ,  ,  ,  ,  , 1,  ,  ,
+   ,  ,  ,  ,  ,  ,  , 1,  ,  ,
+   ,  ,  ,  ,  ,  ,  ,  ,  ,  ,
    ,  ,  ,  ,  ,  ,  ,  ,  ,  ,
 ];
 
@@ -636,14 +662,26 @@ function getNeighbours(x, y, z) {
   ].filter(b => b !== undefined);
 }
 
+const jobs = [];
 const agentPathTargetTracker = new WeakMap();
 const agentPathTrackedLength = 2;
 
-function generateAgent(x, y, goal) {
+function generateAgent() {
   const roadMap = getRoadMap();
   const keys = Object.keys(roadMap);
-  const key = keys[Math.random() * keys.length | 0];
-  const block = roadMap[key];
+  let jobPath;
+  let block;
+
+  if (jobs) {
+    jobPath = jobs.shift();
+  } else {
+    const key = keys[Math.random() * keys.length | 0];
+    block = roadMap[key];
+  }
+
+  if (jobPath) {
+    block = roadMap[jobPath.shift()];
+  }
 
   if (!block) {
     return;
@@ -653,6 +691,7 @@ function generateAgent(x, y, goal) {
   
   // if (block) {
     agentPathTargetTracker.set(agent, [block]);
+    agent.jobPath = jobPath;
     agent.goal = {
       x: block.y * BLOCK_SIZE | 0,
       y: block.x * BLOCK_SIZE | 0,
@@ -685,11 +724,18 @@ function updateGameWorld() {
       if (agentPathTargetTracker.has(agent)) {
         const path = agentPathTargetTracker.get(agent);
         const currentTarget = path[0];
-        const neighbours = getRoadNeighbours(currentTarget).filter(n => !path.includes(n));
         let newTarget;
 
-        if (neighbours.length > 0) {
-          newTarget = neighbours[Math.random() * neighbours.length | 0];
+        if (agent.jobPath === undefined) {
+          console.log("NO PATH", agent.jobPath);
+          const neighbours = getRoadNeighbours(currentTarget).filter(n => !path.includes(n));
+
+          if (neighbours.length > 0) {
+            newTarget = neighbours[Math.random() * neighbours.length | 0];
+          }
+        } else if (agent.jobPath) {
+          newTarget = getRoadMap()[agent.jobPath.shift()];
+          console.log("HAS PATH", agent.jobPath.length, newTarget);
         }
 
         if (newTarget) {
