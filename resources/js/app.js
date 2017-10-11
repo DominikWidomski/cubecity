@@ -252,12 +252,12 @@ function getBoxHTML(type) {
      // }, 500);
 
      var box = newBox();
-     const x = pos.top;
-     const y = pos.left;
+     const x = pos.left;
+     const y = pos.top;
      const z = pos.z;
 
-     box.style.top = x + "px";
-     box.style.left = y + "px";
+     box.style.left = x + "px";
+     box.style.top = y + "px";
      box.style.setProperty("--z-pos", z + "px");
      box.dataset.level = parseInt(parent.dataset.level) + (side.classList.contains("t") ? 1 : 0) || 0;
      
@@ -394,24 +394,25 @@ const scene = [];
 const sceneRefs = new WeakMap();
 
 function generateWorld(roadMap = []) {
-  for (let x = 0; x < WORLD_X; x += BLOCK_SIZE) {
-    for (let y = 0; y < WORLD_Y; y += BLOCK_SIZE) {
-      const [_x, _y] = [x / BLOCK_SIZE, y / BLOCK_SIZE];
-      const width = 10;
-      let type = 'BLOCK';
+  const blockMapping = [
+    'BLOCK',
+    'ROAD'
+  ];
 
-      if (roadMap[_y * width + _x] === 1) {
-        type = 'ROAD';
-      }
+  for (let y = 0; y < WORLD_Y; y += BLOCK_SIZE) {
+    for (let x = 0; x < WORLD_X; x += BLOCK_SIZE) {
+      const [_x, _y] = [x / BLOCK_SIZE, y / BLOCK_SIZE];
+      const width = WORLD_X / BLOCK_SIZE;
+      const type = blockMapping[roadMap[_y * width + _x]] || 'BLOCK';
 
       const box = newBox(type);
       
-      box.style.top = x + "px";
-      box.style.left = y + "px";
-      box.style.setProperty("--z-pos", 20 + "px");
+      box.style.left = x + "px";
+      box.style.top = y + "px";
+      box.style.setProperty("--z-pos", "20px");
       box.dataset.level = 0;
       
-      box.querySelector('.t').innerText = `${_x}, ${_y}`;
+      box.querySelector('.t').innerText = `${_x}.${_y}`;
       // paintTextures(box);
 
       addBlock({
@@ -541,12 +542,9 @@ function findPath(start, end) {
    * Simple euclidean distance between nodes
    * assuming all grid locations are 1 unit away
    * not including special conditions
+   * @TODO: rename distanceCost, don't sqrt distance, treat it purely as H cost
    */
   function distance(a, b) {
-    // @TODO: Node::toString() and Node::distance(node)?
-    // let [x1, y1] = a.split(',').map(Number);
-    // let [x2, y2] = b.split(',').map(Number);
-
     return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
   }
 
@@ -632,8 +630,6 @@ function findPath(start, end) {
     }
 
     visited.push(node);
-    // console.log('%c===================================', 'background: teal;');
-    // console.log(`${p} SEARCHING NODE ${node.x},${node.y}`);
     console.group(node, 'SEARCHING NODE');
 
     // If is target
@@ -648,7 +644,6 @@ function findPath(start, end) {
     console.log(`GOT ${neighbours.length} NEIGHBOURS`);
 
     for (let neighbourNode of neighbours) {
-      // console.log(`[${node.x},${node.y}] GONNA CHECK NODE ${neighbourNode.x},${neighbourNode.y}`);
       const subPath = searchFromNodeNaive(neighbourNode);
       console.log(`SUBPATH RETURNED FROM ${neighbourNode.x},${neighbourNode.y}, ${subPath}`);
 
@@ -779,14 +774,14 @@ function generateAgent() {
     return;
   }
 
-  const agent = new Agent(block.y * BLOCK_SIZE, block.x * BLOCK_SIZE, document.querySelector('.plane'));
+  const agent = new Agent(block.x * BLOCK_SIZE, block.y * BLOCK_SIZE, document.querySelector('.plane'));
   
   // if (block) {
     agentPathTargetTracker.set(agent, [block]);
     agent.jobPath = jobPath;
     agent.goal = {
-      x: block.y * BLOCK_SIZE | 0,
-      y: block.x * BLOCK_SIZE | 0,
+      x: block.x * BLOCK_SIZE | 0,
+      y: block.y * BLOCK_SIZE | 0,
     };
   // } else {
   //   agent.goal = {
@@ -835,8 +830,8 @@ function updateGameWorld() {
           path.length = agentPathTrackedLength;
 
           agent.goal = {
-            x: newTarget.y * BLOCK_SIZE | 0,
-            y: newTarget.x * BLOCK_SIZE | 0,
+            x: newTarget.x * BLOCK_SIZE | 0,
+            y: newTarget.y * BLOCK_SIZE | 0,
           };
 
           continue;   
@@ -854,8 +849,8 @@ function updateGameWorld() {
       if (block) {
         agentPathTargetTracker.set(agent, block);
         agent.goal = {
-          x: block.y * BLOCK_SIZE | 0,
-          y: block.x * BLOCK_SIZE | 0,
+          x: block.x * BLOCK_SIZE | 0,
+          y: block.y * BLOCK_SIZE | 0,
         };
       } else {
         agent.goal = {
