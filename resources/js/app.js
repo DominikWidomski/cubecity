@@ -533,60 +533,138 @@ function findPath(start, end) {
   }
 
   // Closed set - Nodes already visited
-  const visited = [];
+  let visited = [];
   // Open set - Start with the start node
-  // const queue = [a];
+  let openSet = [a];
 
   /**
-   * Simple cardinal(?) distance between nodes
+   * Simple euclidean distance between nodes
    * assuming all grid locations are 1 unit away
    * not including special conditions
    */
   function distance(a, b) {
-    [x1, y1] = a.split(',').map(Number);
-    [x2, y2] = b.split(',').map(Number);
+    // @TODO: Node::toString() and Node::distance(node)?
+    // let [x1, y1] = a.split(',').map(Number);
+    // let [x2, y2] = b.split(',').map(Number);
 
-    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
   }
 
-  function searchFromNode(node, p = '.') {
+  function findCheapestNodes(set) {
+    let cost = Infinity;
+    const nodes = [];
+
+    for (let i = 0; i < set.length; ++i) {
+      const node = set[i];
+
+      if (node.distance === cost) {
+        nodes.push(node);
+      } else if (node.distance < cost) {
+        nodes.length = 0;
+        cost = node.distance;
+        nodes.push(node);
+      }
+    }
+
+    return nodes;
+  }
+
+  function searchFromNodeAStar(node) {
+    if (checks++ > 100) {
+      console.error('TOO DEEP MAN!');
+      return;
+    }
+
+    console.group(node, 'SEARCHING NODE');
+    visited.push(node);
+    openSet.splice(openSet.indexOf(node), 1);
+
+    // This is the target node
+    if (node === b) {
+      console.log(`%cNODE IS TARGET!!! RETURN!`, 'background: salmon;');
+      return node;
+    }
+
+    let path = [node];
+
+    const neighbours = getRoadNeighbours(node)
+      .filter(n => !visited.includes(n))
+      .filter(n => !openSet.includes(n));
+
+    // @TODO: .map()?
+    for ( let [key, node] of Object.entries(neighbours)) {
+      node.distance = distance(node, b);
+    }
+
+    openSet = openSet.concat(neighbours);
+
+    console.log(`GOT ${neighbours.length} NEIGHBOURS`);
+
+    // find cheapest nodes in open set
+    let cheapest = findCheapestNodes(openSet);
+    // pick one at random if more than one found
+    cheapest = cheapest.length === 1 ? cheapest[0] : cheapest[Math.random() * cheapest.length | 0];
+
+    // Could not have found cheapest node
+    if (cheapest) { 
+      const subPath = searchFromNodeAStar(cheapest);
+      console.log(`SUBPATH RETURNED FROM ${cheapest.x},${cheapest.y}, ${subPath}`);
+
+      if (subPath.concat) {
+        path = path.concat(subPath);
+      } else {
+        path.push(subPath);
+      }
+      // if (subPath.includes && subPath.includes(node)) {
+      //   path = path.concat(subPath);
+      // } else {
+      // }
+    }
+
+    console.groupEnd(node);
+    return path;
+  }
+
+  function searchFromNodeNaive(node) {
     if (checks++ > 100) {
       console.log('TOO DEEP MAN!');
       return;
     }
 
-    visited.push(`${node.x},${node.y}`);
+    visited.push(node);
     // console.log('%c===================================', 'background: teal;');
-    console.log(`${p} SEARCHING NODE ${node.x},${node.y}`);
+    // console.log(`${p} SEARCHING NODE ${node.x},${node.y}`);
+    console.group(node, 'SEARCHING NODE');
 
     // If is target
     if (node.x === b.x && node.y === b.y) {
-      console.log(`${p} NODE IS TARGET!!! RETURN!`);
-      return `${node.x},${node.y}`;
+      console.log(`%cNODE IS TARGET!!! RETURN!`, 'background: salmon;');
+      return node;
     }
 
-    let path = [`${node.x},${node.y}`];
+    let path = [node];
 
-    const neighbours = getRoadNeighbours(node).filter(n => !visited.includes(`${n.x},${n.y}`));
-    console.log(`${p} GOT ${neighbours.length} NEIGHBOURS`);
+    const neighbours = getRoadNeighbours(node).filter(n => !visited.includes(n));
+    console.log(`GOT ${neighbours.length} NEIGHBOURS`);
 
     for (let neighbourNode of neighbours) {
       // console.log(`[${node.x},${node.y}] GONNA CHECK NODE ${neighbourNode.x},${neighbourNode.y}`);
-      const subPath = searchFromNode(neighbourNode, p+'.');
-      console.log(`${p} SUBPATH RETURNED FROM ${neighbourNode.x},${neighbourNode.y}, ${subPath}`);
+      const subPath = searchFromNodeNaive(neighbourNode);
+      console.log(`SUBPATH RETURNED FROM ${neighbourNode.x},${neighbourNode.y}, ${subPath}`);
 
-      if (subPath.includes(`${b.x},${b.y}`)) {
+      if (subPath.includes) {
         path = path.concat(subPath);
-        // console.log('Path: %o', path);
+      } else {
+        path.push(subPath);
       }
     }
 
-    // console.log(`RETURNING PATH from  ${node.x},${node.y}: %o`, path);
-
+    console.groupEnd(node);
     return path;
   }
 
-  const final = searchFromNode(a);
+  // const final = searchFromNodeNaive(a);
+  const final = searchFromNodeAStar(a);
   console.log('PATH: ', final);
   return final;
 }
@@ -595,7 +673,21 @@ window.findPath = findPath;
 window.getRoadMap = getRoadMap;
 window.getRoadNeighbour = getRoadNeighbour;
 window.runPath = function(from, to) {
-  jobs.push(findPath(from, to));
+  const job = findPath(from, to);
+
+  for (let i = 0; i < job.length; ++i) {
+    let color = 'teal';
+
+    if (i === 0 || i === job.length - 1) {
+      color = 'red';
+    }
+
+    const node = job[i];
+    node.el.querySelector('.t').style.background = color;
+  }
+
+  jobs.push(job.map(n => `${n.x},${n.y}`));
+
   generateAgent();
 }
 

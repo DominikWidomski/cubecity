@@ -13,6 +13,16 @@ A Pen created at CodePen.io. You can find this one at http://codepen.io/dwidomsk
 - [ ] Simple AI agents
 - [ ] Camera controls
 
+## Path finding:
+
+1. Grid based A*
+
+
+
+2. Node based Dijkstra's
+
+Would require me to convert the grid into nodes connected by edges of distance.
+
 ## Blocks:
 
 - Road
