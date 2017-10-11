@@ -1,4 +1,5 @@
 import Agent from './components/agent';
+import PathBuilderManager from './ui/path-builder-manager';
 
 const BLOCK_SIZE = 50;
 const WORLD_X = 500;
@@ -167,6 +168,11 @@ function getBoxHTML(type) {
     dragging = false;
   });
 
+  const pathInterface = new PathBuilderManager();
+  pathInterface.on('finish', nodes => {
+    runPath.apply(undefined, nodes.map(n => `${n.x},${n.y}`));
+  });
+
   b.addEventListener('keypress', e => {
     if (e.key === 'b') {
       let currIndex = STRUCTURES.indexOf(SELECTED_STRUCTURE);
@@ -175,6 +181,16 @@ function getBoxHTML(type) {
 
     if (e.key === 'a') {
       generateAgent();
+    }
+
+    if (e.key === 'p') {
+      pathInterface.start();
+    }
+  });
+
+  b.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      pathInterface.cancel();
     }
   });
 
@@ -210,6 +226,14 @@ function getBoxHTML(type) {
     const target = e.target;
     const side = target.closest(".side");
     const parent = target.closest(".box");
+
+    if (pathInterface.state === 'listening') {
+      const node = getBlockByElement(parent);
+      if (node.type === 'ROAD') {
+        pathInterface.node(node);
+        return;
+      }
+    }
 
     if (e.shiftKey) {
       if (SELECTED_STRUCTURE === 'BLOCK') {
@@ -507,6 +531,33 @@ function getRoadNeighbours(block) {
   }).filter(a => a);
 }
 
+
+function renderJobDebug(job) {
+  for (let i = 0; i < job.length; ++i) {
+    let color = 'teal';
+
+    if (i === 0 || i === job.length - 1) {
+      color = 'red';
+    }
+
+    const node = job[i];
+    let debugEl = node.el.querySelector('.node-debug');
+
+    if (!debugEl) {
+      debugEl = document.createElement('div');
+      debugEl.className = 'node-debug';
+      node.el.querySelector('.t').appendChild(debugEl);
+    }
+
+    debugEl.innerText = i;
+    debugEl.style.background = color;
+  }
+}
+
+function clearAllJobDebug() {
+  document.querySelectorAll('.node-debug').forEach(el => el.style.background = 'none');
+}
+
 /**
  * Find road path from A to B
  *
@@ -670,20 +721,11 @@ window.getRoadNeighbour = getRoadNeighbour;
 window.runPath = function(from, to) {
   const job = findPath(from, to);
 
-  for (let i = 0; i < job.length; ++i) {
-    let color = 'teal';
+  clearAllJobDebug();
+  renderJobDebug(job);
 
-    if (i === 0 || i === job.length - 1) {
-      color = 'red';
-    }
-
-    const node = job[i];
-    node.el.querySelector('.t').style.background = color;
-  }
-
-  jobs.push(job.map(n => `${n.x},${n.y}`));
-
-  generateAgent();
+  // @TODO: Should just be nodes
+  generateAgent(job.map(n => `${n.x},${n.y}`));
 }
 
 function getBlockByElement(el) {
@@ -753,21 +795,22 @@ const jobs = [];
 const agentPathTargetTracker = new WeakMap();
 const agentPathTrackedLength = 2;
 
-function generateAgent() {
+/**
+ * Generate an agent and add it to the world
+ * Optionally also give it a job
+ *
+ * @param {Array} [jobPath]
+ */
+function generateAgent(jobPath) {
   const roadMap = getRoadMap();
-  const keys = Object.keys(roadMap);
-  let jobPath;
   let block;
-
-  if (jobs) {
-    jobPath = jobs.shift();
-  } else {
-    const key = keys[Math.random() * keys.length | 0];
-    block = roadMap[key];
-  }
 
   if (jobPath) {
     block = roadMap[jobPath.shift()];
+  } else {
+    const keys = Object.keys(roadMap);
+    const key = keys[Math.random() * keys.length | 0];
+    block = roadMap[key];
   }
 
   if (!block) {

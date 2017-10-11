@@ -9,15 +9,32 @@ A Pen created at CodePen.io. You can find this one at http://codepen.io/dwidomsk
 ## Todo:
 
 - [ ] Building panel (building and road blocks)
-- [ ] Simple path finding
-- [ ] Simple AI agents
+- [x] Simple path finding
+- [x] Simple AI agents
 - [ ] Camera controls
+
+### UI Events
+
+https://stackoverflow.com/questions/4574016/game-objects-talking-to-each-other/4580241#4580241
+
+... how do I keep state of whatever is happening in the UI... ?
+Like, if I'm in building mode, I want the building manager to pick up all the events.
+If i'm drawing a path, i want the pathing manager to pick up all events.
+Do I just setup like a global state manager that can then 'attach' and 'detach' other managers which will in turn
+assign their own event listeners?
+Those can also have their own children I suppose and assign their own managers if need be.
 
 ## Path finding:
 
 1. Grid based A*
 
+http://web.mit.edu/eranki/www/tutorials/search/
 
+### Issues:
+
+- I'd like a unit tests and testing environment builder, specific examples, easy configuration, expected paths, etc.
+- returning only the shortest path, no extra nodes, could randomly select possible nodes
+- handling no path found state, maybe also figuring out easily if path can be reached at all?
 
 2. Node based Dijkstra's
 
