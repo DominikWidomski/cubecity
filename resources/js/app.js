@@ -34,14 +34,26 @@ const blockConfig = {
 };
 
 function newBox(type = 'BLOCK') {
+  const blockClasses = {
+    BUILDING: 'building'
+  }
+
   const node = document.createElement('div');
-  node.innerHTML = getBoxHTML(type);
+  node.innerHTML = getBoxHTML(type, blockClasses[type]);
 
   return node.firstChild;
 }
 
-function getBoxHTML(type) {
-  return `<div class="box">
+/**
+ * Get the HTML of a box
+ *
+ * @param {string} type
+ * @param {string} classList
+ *
+ * @return {string}
+ */
+function getBoxHTML(type, classList = '') {
+  return `<div class="box ${classList.join ? classList.join(' ') : classList}">
     <div class="side"></div>
     <div class="side r"></div>
     <div class="side l"></div>
@@ -276,6 +288,7 @@ function getBoxHTML(type) {
      // }, 500);
 
      var box = newBox();
+     box.classList.add('building');
      const x = pos.left;
      const y = pos.top;
      const z = pos.z;
@@ -417,34 +430,65 @@ requestAnimationFrame(draw);
 const scene = [];
 const sceneRefs = new WeakMap();
 
-function generateWorld(roadMap = []) {
+async function generateWorld(roadMap = []) {
   const blockMapping = [
     'BLOCK',
-    'ROAD'
+    'ROAD',
+    'BUILDING'
   ];
+  const worldPlane = document.querySelector(".plane");
+
+  async function setStyleAsync(element, prop, value) {
+    return new Promise((resolve, reject) => {
+      element.style[prop] = value;
+
+      element.addEventListener("transitionend", function(event) {
+        if (event.srcElement === element && event.propertyName === prop) {
+          resolve();
+        }
+      });
+    });
+  }
+
+  async function wait(duration = 0) {
+    return new Promise(resolve => setTimeout(resolve, duration));
+  }
+
+  await wait(300);
+  await setStyleAsync(worldPlane, 'width', `${WORLD_X}px`);
+  await wait(300);
+  await setStyleAsync(worldPlane, 'height', `${WORLD_Y}px`);
+  await wait(300);
 
   for (let y = 0; y < WORLD_Y; y += BLOCK_SIZE) {
     for (let x = 0; x < WORLD_X; x += BLOCK_SIZE) {
       const [_x, _y] = [x / BLOCK_SIZE, y / BLOCK_SIZE];
       const width = WORLD_X / BLOCK_SIZE;
       const type = blockMapping[roadMap[_y * width + _x]] || 'BLOCK';
+      const blockStack = [type];
 
-      const box = newBox(type);
-      
-      box.style.left = x + "px";
-      box.style.top = y + "px";
-      box.style.setProperty("--z-pos", "20px");
-      box.dataset.level = 0;
-      
-      box.querySelector('.t').innerText = `${_x}.${_y}`;
-      // paintTextures(box);
+      if (type === 'BUILDING') {
+        blockStack.unshift('BLOCK');
+      }
 
-      addBlock({
-        el: box,
-        type,
-      }, _x, _y, 0);
+      for (var i = 0; i < blockStack.length; ++i) {
+        const box = newBox(blockStack[i]);
+        
+        box.style.left = x + 'px';
+        box.style.top = y + 'px';
+        box.style.setProperty('--z-pos', `${20 + i * BLOCK_SIZE}px`);
+        box.style.setProperty('--height', `${(Math.random() * 20 + 20 | 0) * -1}px`);
+        box.dataset.level = i;
+        
+        box.querySelector('.t').innerText = `${_x}.${_y}`;
 
-      document.querySelector(".plane").appendChild(box);
+        addBlock({
+          el: box,
+          type
+        }, _x, _y, i);
+
+        worldPlane.appendChild(box);
+      }
     }
   }
 }
@@ -468,10 +512,12 @@ function getRoadMap() {
   }).filter(xArr => xArr.length);
 
   const roadMap = {};
+  // const roadMap = new Map();
 
   for (const row of roadBlocks) {
     for (const block of row) {
       roadMap[`${block.x},${block.y}`] = block;
+      // roadMap.set(`${block.x},${block.y}`, block);
     }
   }
 
@@ -555,7 +601,10 @@ function renderJobDebug(job) {
 }
 
 function clearAllJobDebug() {
-  document.querySelectorAll('.node-debug').forEach(el => el.style.background = 'none');
+  document.querySelectorAll('.node-debug').forEach(el => {
+    el.innerText = '';
+    el.style.background = 'none';
+  });
 }
 
 /**
@@ -735,10 +784,10 @@ function getBlockByElement(el) {
 const roadMap = [
    ,  ,  ,  ,  ,  ,  ,  ,  ,  ,
    ,  ,  ,  ,  ,  ,  ,  ,  ,  ,
-   ,  , 1, 1, 1, 1, 1, 1, 1,  ,
-   ,  , 1,  ,  , 1,  ,  , 1,  ,
-   ,  , 1, 1, 1, 1, 1,  , 1,  ,
-   ,  ,  ,  , 1,  , 1, 1, 1,  ,
+   , 2, 1, 1, 1, 1, 1, 1, 1,  ,
+   , 2, 1, 2, 2, 1, 2, 2, 1,  ,
+   , 2, 1, 1, 1, 1, 1, 2, 1,  ,
+   ,  ,  ,  , 1, 2, 1, 1, 1,  ,
    ,  ,  ,  ,  ,  ,  , 1,  ,  ,
    ,  ,  ,  ,  ,  ,  , 1,  ,  ,
    ,  ,  ,  ,  ,  ,  ,  ,  ,  ,

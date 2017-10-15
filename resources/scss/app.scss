@@ -70,6 +70,9 @@ canvas {
   animation-duration: 10s;
   animation-iteration-count: infinite;
   animation-timing-function: linear;
+
+  transition: width .4s cubic-bezier(0, 0.8, 0.3, 1.2),
+              height .4s cubic-bezier(0, 0.8, 0.3, 1.2);
   
   position: relative;
   
@@ -92,6 +95,7 @@ canvas {
   --x-pos: 0;
   --y-pos: 0;
   --z-offset: 0px;
+  --scale: 1;
   
   position: relative;
   width: 50px;
@@ -103,18 +107,20 @@ canvas {
   transform: translateX(var(--x-pos, 0))
     translateY(var(--y-pos, 0))
     rotateY(-90deg)
-    translateX(calc(var(--z-pos, 0) + var(--z-offset, 0))) rotateY(90deg);
+    translateX(calc(var(--z-pos, 0) + var(--z-offset, 0))) rotateY(90deg)
+    scale3d(var(--scale), var(--scale), var(--scale))
+    rotateZ(var(--z-rotate, 0deg));
   transform-style: preserve-3D;
   
   // bobbing animation, might as well just wrap the elements in one more tag
   // global transform + local transform
-  &:hover {
-    // animation-name: bob;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-duration: 1s;
-    transition: transform;
-  }
+  // &:hover {
+  //   animation-name: bob;
+  //   animation-timing-function: linear;
+  //   animation-iteration-count: infinite;
+  //   animation-duration: 1s;
+  //   transition: transform;
+  // }
   
   // shadow
   &:before
@@ -184,6 +190,56 @@ canvas {
   &.triggered .side 
   {
     box-shadow: 0 0 10px 10px rgba(180, 80, 70, 0.3);
+  }
+}
+
+.building {
+  $side: 5px;
+  --height: -40px;
+  --z-rotate: -90deg;
+
+  transition: transform .4s cubic-bezier(0.45, 0, 0.45, 1.6);
+
+  .side {
+    width: auto;
+    height: auto;
+
+    top: $side;
+    right: $side;
+    bottom: $side;
+    left: $side;
+
+    background-image: url('/resources/images/building_pink_1.png');
+    background-size: 160px 85px;
+
+    &.f {
+      top: var(--height);
+    }
+
+    &.r {
+      bottom: var(--height);
+      background-position-x: -40px;
+    }
+    
+    &.b {
+      top: var(--height);
+      background-position-x: -80px;
+
+      transform: translateX(40px) translateY(-40px) rotateX(-90deg) rotateY(180deg);
+    }
+
+    &.l {
+      top: var(--height);
+      background-position-x: -120px;
+
+      transform: translateY(-40px) rotateX(-90deg) rotateY(-90deg);
+    }
+    
+    &.t {
+      background: #444;
+
+      transform: rotateX(-90deg) translateY(calc(var(--height) - 45px)) rotateX(90deg);
+    }
   }
 }
 
