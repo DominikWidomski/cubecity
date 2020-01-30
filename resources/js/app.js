@@ -12,6 +12,18 @@ const GAME = window.GAME = {
   agents: new Set(),
 };
 
+const helpText = `Functions:
+  h - HELP, show this help text
+  b - BUILD, also switches which structure to build.
+  a - generate an AI AGENT, picks its own randomised path
+  p - start creating a PATH for an AI agent
+  Escape - cancel PATH building
+`;
+
+const unindentText = text => {
+  return text.replace(/\n\s+/g, '\n');
+};
+
 // @TODO: Was trying to create some sort of observable Set easily using Proxy
 // to observe the amount of agents visible etc.
 // Issues with context or something when trying to proxy a Set.
@@ -186,6 +198,10 @@ function getBoxHTML(type, classList = '') {
   });
 
   b.addEventListener('keypress', e => {
+    if (e.key === 'h') {
+      console.log(helpText);
+    }
+    
     if (e.key === 'b') {
       let currIndex = STRUCTURES.indexOf(SELECTED_STRUCTURE);
       SELECTED_STRUCTURE = STRUCTURES[(++currIndex) % STRUCTURES.length];
