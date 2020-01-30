@@ -192,7 +192,7 @@ function getBoxHTML(type, classList = '') {
     dragging = false;
   });
 
-  const pathInterface = new PathBuilderManager();
+  const pathInterface = new PathBuilderManager({ maxLength: 2 });
   pathInterface.on('finish', nodes => {
     runPath.apply(undefined, nodes.map(n => `${n.x},${n.y}`));
   });
@@ -205,10 +205,12 @@ function getBoxHTML(type, classList = '') {
     if (e.key === 'b') {
       let currIndex = STRUCTURES.indexOf(SELECTED_STRUCTURE);
       SELECTED_STRUCTURE = STRUCTURES[(++currIndex) % STRUCTURES.length];
+      console.log(`Changed structure: ${SELECTED_STRUCTURE}`);
     }
 
     if (e.key === 'a') {
-      generateAgent();
+      const agent = generateAgent();
+      console.log(`Agent created at [${agent.x}, ${agent.y}]`);
     }
 
     if (e.key === 'p') {
@@ -255,8 +257,11 @@ function getBoxHTML(type, classList = '') {
     const side = target.closest(".side");
     const parent = target.closest(".box");
 
+    console.log(pathInterface.state);
+
     if (pathInterface.state === 'listening') {
       const node = getBlockByElement(parent);
+      console.log(node);
       if (node.type === 'ROAD') {
         pathInterface.node(node);
         return;
@@ -783,10 +788,23 @@ function findPath(start, end) {
 window.findPath = findPath;
 window.getRoadMap = getRoadMap;
 window.getRoadNeighbour = getRoadNeighbour;
+
+/**
+ * Finds a path between two nodes
+ * dispatches a job and generates an agent for it
+ * 
+ * Also renders job debug.
+ * 
+ * @param from Node
+ * @param to Node
+ */
 window.runPath = function(from, to) {
   const job = findPath(from, to);
 
   clearAllJobDebug();
+  // TODO: does this even register as a job?
+  // Can an agent cancel it when it's finished
+  // So then we can clear the debug?
   renderJobDebug(job);
 
   // @TODO: Should just be nodes
@@ -900,6 +918,8 @@ function generateAgent(jobPath) {
 
   GAME.agents.add(agent);
   agent.init();
+
+  return agent;
 }
 window.agentPathTargetTracker = agentPathTargetTracker;
 

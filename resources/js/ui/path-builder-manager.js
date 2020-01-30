@@ -1,7 +1,8 @@
 class PathBuilderManager {
-  constructor() {
+  constructor({ maxLength }) {
     this.nodes = [];
     this.state = 'idle';
+    this.maxLength = maxLength;
   }
 
   start() {
@@ -11,13 +12,15 @@ class PathBuilderManager {
 
   node(node) {
     if (this.state !== 'listening') {
+      console.log("Path: not listening.");
       return;
     }
 
     this.nodes.push(node);
     console.log(`Path: node ${node}, length: ${this.nodes.length}`);
 
-    if(this.nodes.length === 2) { 
+    if(this.nodes.length === this.maxLength) { 
+      console.log(`Path: reached maxLength (finished)`);
       this.finish();
     }
   }
