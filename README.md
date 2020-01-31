@@ -12,6 +12,7 @@ A Pen created at CodePen.io. You can find this one at http://codepen.io/dwidomsk
 - [x] Simple path finding
 - [x] Simple AI agents
 - [ ] Camera controls
+- [ ] CSS "engine" (see below)
 
 ### UI Events
 
@@ -53,6 +54,98 @@ Would require me to convert the grid into nodes connected by edges of distance.
 ## Audio
 
 Menu music - screensavers theme (have it on SSD)
+
+
+## CSS driven engine
+
+Blocks/Elements can be initialised with static CSS using CSS vars.
+We can define them upfront, and then some helper can get them and add some CSS dynamically to the class for that block.
+
+We can create class definitions on the fly in the client, and they can be specific.
+
+Elements can have a render/update method too, they can do more fancy stuff.
+But a lot could be done with some CSS vars.
+
+```js
+
+class CSSVar {
+  constructor(name, somePropsRegardingConfigCantRemember) {
+    // ...
+  }
+
+  toString() {
+    // Could we have this so that it gets coerced into a string like a CSS var in template literals?
+    // Or only do this if we use a tagged template using `var.toCSSVarString()`?
+    return `--${this.name}`;
+    
+    // or we only return the name so it can be stringified nicely (or with a bit extra)
+    return this.name;
+    return `[CSSVar:${this.name}]`;
+  }
+}
+
+function main() {
+  const bodyDomElement = document.querySelector('body');
+  
+  // this should generate the CSS definitions, initialise them, add them to the root element  
+  const vars = createCSSVar(bodyDomElement, {
+    varName: {
+      ...configObject
+    },
+    ... // many css vars
+  });
+}
+
+const Element {
+  get cssClassName() {
+    return `element-${this.id}`;
+  }
+}
+
+const getCSSVariable = () => {
+  // retrieves definition of it??? :thinking-face:
+  // maybe just import instead
+}
+
+const dynamicCSS = () => {};
+
+class Billboard extends Element {
+  constructor(node, identifier, config) {
+    this.node = node; // DOM Root node for this element
+    this.id = identifier; // something to identify the block with
+  }
+  
+  initialise() {
+    // this is kinda pointless, as long as you reference things by name they'll work.
+    // In CSS things will just be the closest variable... Have a think about that.
+    // Idea was to get this almost like from context... but yeh, maybe pointless
+    const width = getCSSVariable(bodyDomElement, 'width');
+    
+    // this would result in the thing being
+    dynamicCSS(this.node, {
+      width: `${width}` // should result in CSS like: "width: --width"
+    };
+
+    // Register event handlers here too?
+
+    // what to do to build this element in CSS
+    // Maybe a separate method on the class for that, like on(Element?)Mount
+    // so it can return an element that can then be removed from the DOM on removing this Element
+  }
+
+  render() {
+    // do we "register" a render callback?
+    // just something to add to a global requestAnimationFrame?
+    // Not sure what the use would be of a render callback, but might be handy to do some actual JS animations or whatever.
+  }
+
+  cleanup() {
+    // do we need a cleanup?
+    // if we "register" a render callback, then yes, we gotta unregister that haha
+    // unless can be done with the engine, WeakMap internally against elements, unregister render callbacks...
+  }
+}
+```
 
 ## Fuck it, let's make it a multiplayer thing. TURF WARS!!!
 
