@@ -54,8 +54,6 @@ Would require me to convert the grid into nodes connected by edges of distance.
 
 Menu music - screensavers theme (have it on SSD)
 
-
-
 ## Fuck it, let's make it a multiplayer thing. TURF WARS!!!
 
 // @NOTE: don't necessarily commit this
