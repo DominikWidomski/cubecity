@@ -5,11 +5,13 @@ class PathBuilderManager {
     this.maxLength = maxLength;
   }
 
+  // TODO: rename -> startPath
   start() {
     this.state = 'listening';
     console.log(`Path: ${this.state}`);
   }
 
+  // TODO: rename -> addNode
   node(node) {
     if (this.state !== 'listening') {
       console.log("Path: not listening.");
@@ -25,12 +27,14 @@ class PathBuilderManager {
     }
   }
 
+  // TODO: rename -> cancelPath
   cancel() {
     this.nodes = [];
     this.state = 'idle';
     console.log(`Path: ${this.state} (cancelled)`);
   }
 
+  // TODO: rename -> endPath
   finish() {
     this.state = 'idle';
     console.log(`Path: ${this.state} (finished)`);
@@ -40,6 +44,7 @@ class PathBuilderManager {
   }
 
 
+  // TODO: share!
   // Event emitting
 
   on(eventType, handler) {
