@@ -147,6 +147,23 @@ class Billboard extends Element {
 }
 ```
 
+## Procedural generation
+
+Can I have things generated procedurally based on a seed. Things like:
+- properties of agents
+  - how aggressively they drive
+  - how fast they like to drive
+  - their preferred parking space in a parking log of a shopping center
+- their daily schedule
+- their name
+
+Plus any manual amendments implemented over that.
+Point is to not store a lot of data, but to just look up things based on a seed, consistently be able to recall any bit of information, like, "what is this agent suppose to be doing at this time of day?", "what parking space do they prefer in this parking lot?", all could be looked up wherever, maybe based on a few seeds (or uuid? loads of data in that) and a function that convers that into some usable information.
+
+## Multi block elements
+
+Shopping center should have loads of parking spaces and might take up loads of squares, 4x4, 4x6 etc.
+
 ## Fuck it, let's make it a multiplayer thing. TURF WARS!!!
 
 // @NOTE: don't necessarily commit this
