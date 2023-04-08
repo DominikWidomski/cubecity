@@ -147,6 +147,79 @@ class Billboard extends Element {
 }
 ```
 
+## Job queue
+
+Mayyyybe it'd be nice to have like a job queue type thing.
+Some API to have a way of registering recurring jobs.
+There could be a queue listener that gets registrations and it puts it in the queue, in order of when it's suppose to happen. That way it doesn't have to check with everything every time, it would check from the front (or back, using `pop` but might as well use `shift` and keep the queue in logical, chronological order), until the job doesn't have to fire yet.
+
+Use `requestIdleCallback` and a `setTimeout` type API so the callback can register next job if it wants to.
+
+### API musings
+```javascript
+class QueueManager {
+  queue = [];
+  
+  register() {
+    
+  }
+
+  addToQueue(time, task) {
+    // find where in the queu this fits
+    // instead of an array, should I implement a linked list?
+    // so I can reorder it more easily?
+
+    // I'm not sure whether to do it in an internal timer that resets with each executed job
+    // or... hmm... I think it needs to be like a universal clock, a timestamp of when something
+    // is expected to execute, because then we can just check with the current time
+    // and requestIdleCallback will limit how many can get executed at a time I believe.
+    // so it will automatically limit the imact of however many jobs get executed at a time if we
+    // were to run a shitload because they all expect to run at around the same time
+  }
+
+  every(interval, callback) {
+    return new QueueJob(callback);
+  }
+}
+
+class BuildingType {
+  initialise() {
+    this.deliveryRecurringJob = queueManager.every(10 * 1000, this.sendDelivery);
+
+    queueManager.registerJob(now().addSeconds(10), this.sendDelivery);
+  }
+
+  cleanup() {
+    this.deliveryRecurringJob.stop();
+  }
+
+  sendDelivery(manager) {
+    // do something
+
+    if (iNeedToDispatchAnotherThing) {
+      manager.registerJob(now().addSeconds(10), )
+    }
+  }
+}
+```
+
+## Procedural generation
+
+Can I have things generated procedurally based on a seed. Things like:
+- properties of agents
+  - how aggressively they drive
+  - how fast they like to drive
+  - their preferred parking space in a parking log of a shopping center
+- their daily schedule
+- their name
+
+Plus any manual amendments implemented over that.
+Point is to not store a lot of data, but to just look up things based on a seed, consistently be able to recall any bit of information, like, "what is this agent suppose to be doing at this time of day?", "what parking space do they prefer in this parking lot?", all could be looked up wherever, maybe based on a few seeds (or uuid? loads of data in that) and a function that convers that into some usable information.
+
+## Multi block elements
+
+Shopping center should have loads of parking spaces and might take up loads of squares, 4x4, 4x6 etc.
+
 ## Fuck it, let's make it a multiplayer thing. TURF WARS!!!
 
 // @NOTE: don't necessarily commit this

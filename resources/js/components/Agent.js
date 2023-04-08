@@ -41,6 +41,7 @@ class Agent {
 
   set goal(value) {
     this._goal = value;
+    // TODO: How would be manage that thing in a reasonable way?
     this.goalElement.style.left = value.x + 'px';
     this.goalElement.style.top = value.y + 'px';
   }
@@ -50,6 +51,7 @@ class Agent {
   }
 
   update() {
+    // TODO: some util
     const distanceToGoal = Math.sqrt(Math.pow(this._goal.x - this.x, 2) + Math.pow(this._goal.y - this.y, 2));
 
     if (distanceToGoal < 1) {
@@ -81,6 +83,22 @@ class Agent {
   destroy() {
     this.element.remove();
     this.goalElement.remove();
+    this.emit('destroy');
+  }
+
+  // Event emitting
+
+  on(eventType, handler) {
+    this.eventHandlers = this.eventHandlers || [];
+    this.eventHandlers[eventType] = this.eventHandlers[eventType] || [];
+
+    this.eventHandlers[eventType].push(handler);
+  }
+
+  emit(eventType, ...args) {
+    for (let handler of this.eventHandlers[eventType]) {
+      handler.call(this, ...args);
+    }
   }
 }
 

@@ -194,7 +194,7 @@ function getBoxHTML(type, classList = '') {
 
   const pathInterface = new PathBuilderManager({ maxLength: 2 });
   pathInterface.on('finish', nodes => {
-    runPath.apply(undefined, nodes.map(n => `${n.x},${n.y}`));
+    runPath(...nodes);
   });
 
   b.addEventListener('keypress', e => {
@@ -503,6 +503,7 @@ async function generateWorld(roadMap = []) {
         
         box.querySelector('.t').innerText = `${_x}.${_y}`;
 
+        // TODO: make the API more explicit, pass object of all props?
         addBlock({
           el: box,
           type
@@ -628,6 +629,15 @@ function clearAllJobDebug() {
   });
 }
 
+function clearJobDebug(job) {
+  for (let i = 0; i < job.length; ++i) {
+    let debugEl = job[i].el.querySelector('.node-debug');
+
+    debugEl.innerText = '';
+    debugEl.style.background = 'none';
+  }
+}
+
 /**
  * Find road path from A to B
  *
@@ -643,8 +653,8 @@ function findPath(start, end) {
 
   // All ROAD nodes
   const roadMap = getRoadMap();
-  const a = roadMap[start];
-  const b = roadMap[end];
+  const a = roadMap[`${start.x},${start.y}`];
+  const b = roadMap[`${end.x},${end.y}`];
 
   // console.log('Got Road map of ${roadMap.length} nodes');
 
@@ -654,6 +664,7 @@ function findPath(start, end) {
     return;
   }
 
+  // TODO: Change to sets or objects for O(1) read
   // Closed set - Nodes already visited
   let visited = [];
   // Open set - Start with the start node
@@ -712,6 +723,7 @@ function findPath(start, end) {
 
     // @TODO: .map()?
     for ( let [key, node] of Object.entries(neighbours)) {
+      // TODO: I think I assign this to the node in the roadMap unintentionally... 😬
       node.distance = distance(node, b);
     }
 
@@ -795,10 +807,14 @@ window.getRoadNeighbour = getRoadNeighbour;
  * 
  * Also renders job debug.
  * 
- * @param from Node
- * @param to Node
+ * @param nodes Node[]
  */
-window.runPath = function(from, to) {
+window.runPath = function(...nodes) {
+  // TODO: currently assuming 2 nodes only
+  if(nodes.length > 2) {
+    console.warning("Only running paths with 2 nodes (start, finish) for now.");
+  }
+  const [from, to] = nodes;
   const job = findPath(from, to);
 
   clearAllJobDebug();
@@ -807,8 +823,15 @@ window.runPath = function(from, to) {
   // So then we can clear the debug?
   renderJobDebug(job);
 
+  console.log("JOB", job);
+
   // @TODO: Should just be nodes
-  generateAgent(job.map(n => `${n.x},${n.y}`));
+  const agent = generateAgent(job);
+
+  agent.on('destroy', () => {
+    clearAllJobDebug();
+    clearJobDebug(job)
+  });
 }
 
 function getBlockByElement(el) {
@@ -833,7 +856,9 @@ generateWorld(roadMap);
 // block - position, textures for each side
 function addBlock(block, x, y, z) {
   block = Object.assign({}, block, {
-    x, y, z
+    x, y, z,
+    // TODO: key only in 2D?
+    key: `${x},${y}`
   });
 
   // Reference to block from DOMElement
@@ -882,20 +907,28 @@ const agentPathTrackedLength = 2;
  * Generate an agent and add it to the world
  * Optionally also give it a job
  *
- * @param {Array} [jobPath]
+ * @param {Array<Node>} [jobPath]
  */
 function generateAgent(jobPath) {
+  console.log("GENERATE AGENT", jobPath);
   const roadMap = getRoadMap();
   let block;
 
+  // get first block of the path
+  // TODO: Not sure why this woudl be necessary, should be Agent's responsibility right?
   if (jobPath) {
-    block = roadMap[jobPath.shift()];
+    const node = jobPath.shift();
+    if (node) {
+      // TODO: `node.key`?
+      block = roadMap[`${node.x},${node.y}`];
+    }
   } else {
     const keys = Object.keys(roadMap);
     const key = keys[Math.random() * keys.length | 0];
     block = roadMap[key];
   }
 
+  // In case nothing is found I guess, like there's no map, there's nowhere to put the Agent
   if (!block) {
     return;
   }
@@ -918,7 +951,7 @@ function generateAgent(jobPath) {
 
   GAME.agents.add(agent);
   agent.init();
-
+  
   return agent;
 }
 window.agentPathTargetTracker = agentPathTargetTracker;
@@ -994,4 +1027,11 @@ function updateGameWorld() {
   }
 }
 
-requestAnimationFrame(updateGameWorld);
+const main = () => {
+  console.log("Welcome!!!");
+  console.log(helpText);
+
+  requestAnimationFrame(updateGameWorld);
+}
+
+main();
